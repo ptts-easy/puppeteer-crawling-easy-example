@@ -1,0 +1,19 @@
+{
+  "name": "puppeteer-crawling-easy-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "ptts",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^19.2.2",
+    "puppeteer-core": "^19.2.2",
+    "puppeteer-extra": "^3.3.4",
+    "puppeteer-extra-plugin-stealth": "^2.11.1"
+  }
+}
