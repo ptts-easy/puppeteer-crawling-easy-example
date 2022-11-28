@@ -1,30 +1,18 @@
-//const puppeteer = require('puppeteer');
-//const puppeteer = require('puppeteer-core');
-const puppeteer = require('puppeteer-extra')
-
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+//import puppeteer from "puppeteer";
+//import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
 
 puppeteer.use(StealthPlugin())
-
-
-const config = require('./config.json');
 
 let browser = null;
 let page = null;
 
-const cookie = {
-  name: 'login_email',
-  value: 'set_by_cookie@domain.com',
-  domain: '.paypal.com',
-  url: 'https://www.paypal.com/',
-  path: '/',
-  httpOnly: true,
-  secure: true
-}
-
-async function startBrowser() {
-  if(browser != null) {
-    await stop_crawler();
+export async function startBrowser(config) {
+  if (browser != null) {
+    if (false == await stop_crawler()) {
+      return false;
+    }
   }
 
   browser = await puppeteer.launch(config);
@@ -36,79 +24,177 @@ async function startBrowser() {
   } else {
     page = await browser.newPage();
   }
+
+  return true;
 }
 
-async function stopBrowser() {
+export async function stopBrowser() {
   if (browser != null) {
     page = null;
     await browser.close();
     browser = null;
+    return true;
   }
+  return false;
 }
 
-async function setPagOptions(){
+export async function setHTTPHeaders(header) {
   if (browser == null || page == null) {
     return false;
   }
 
-  await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8' })
-  await page.setCookie(cookie);
-  await page.setViewport({ width: 1366, height: 768});
+  await page.setExtraHTTPHeaders(header);
 }
 
-async function setPageEvents(){
+export async function setCookie(cookie) {
+  if (browser == null || page == null) {
+    return false;
+  }
+
+  await page.setCookie(cookie);
+}
+
+export async function setPagOptions(option) {
+  if (browser == null || page == null) {
+    return false;
+  }
+
+  await page.setDefaultNavigationTimeout(option.defaultNavigationTimeout);
+
+  await page.setViewport(option.viewport);
+}
+
+export async function setPageEvents(config) {
   if (browser == null || page == null) {
     return false;
   }
 
   await page.setRequestInterception(true);
 
-  page.on('load', () => {
-    console.log("on::load::", 'page loaded!');
+  page.on('error', () => {
+//    console.log("on::error");
   });
 
-  page.on('domcontentloaded', () => {
-    console.log("on::domcontentloaded::", 'page domcontentloaded!');
+  page.on('metrics', () => {
+//    console.log("on::metrics");
   });
 
-  page.on('dialog', async dialog => {
-    console.log("on::dialog::", dialog.message())
-//    await dialog.dismiss()
+  page.on('pageerror', () => {
+//    console.log("on::pageerror");
   });
 
   page.on('close', async () => {
-    console.log("on::close");
+//    console.log("on::close");
+  });
+
+  page.on('console', () => {
+//    console.log("on::console");
+  });
+
+  page.on('load', () => {
+//    console.log("on::load::", 'page loaded!');
+  });
+
+  page.on('domcontentloaded', () => {
+//    console.log("on::domcontentloaded::", 'page domcontentloaded!');
+  });
+
+  page.on('dialog', async dialog => {
+//    console.log("on::dialog::", dialog.message())
+    try {
+//      await dialog.accept();
+      await dialog.dismiss();
+    } catch (e) {}
+  });
+
+  page.on('popup', () => {
+//    console.log("on::popup");
+  });
+
+  page.on('requestfailed', () => {
+//    console.log("on::requestfailed");
+  });
+
+  page.on('requestfinished', () => {
+//    console.log("on::requestfinished");
+  });
+
+  page.on('requestservedfromcache', () => {
+//    console.log("on::requestservedfromcache");
+  });
+
+  page.on('workercreated', () => {
+//    console.log("on_workercreated");
+  });
+
+  page.on('workerdestroyed', () => {
+//    console.log("on_workerdestroyed");
   });
 
   page.on('request', request => {
-    console.log("on::request::", "isNavigationRequest : ", request.isNavigationRequest());
-    console.log("on::request::", "isMainFrame : ", request.frame() === page.mainFrame());
-    if (request.resourceType() === 'image') {
-      request.abort();
-//      request.respond(request.redirectChain().length
-//        ? { body: '' } // prevent 301/302 redirect
-//        : { status: 204 } // prevent navigation by js
-//      );
-    } else {
-      console.log("on::request::", "url : ", request.url());
+
+    let req_type = request.resourceType();
+
+    if (true == filterRequest(request, config)) {
       request.continue();
+      console.log("request::continue :: ", req_type);
+    } else {
+      request.abort();
+      console.log("request::abort :: ", req_type);
     }
   });
+
   page.on('response', (response) => {
-    const request = response.request();
-    if (request.resourceType() !== 'image') {
-      console.log("on::response::", response.status(), response.url());
-    }
+
+    const filter_flg = filterResponse(response, config);
+
+    console.log("response :: ", filter_flg);
   });
 }
 
-async function gotoUrl(url){
+function filterRequest(request, config) {
+//    console.log("on::request::", "isNavigationRequest : ", request.isNavigationRequest());
+//    console.log("on::request::", "isMainFrame : ", request.frame() === page.mainFrame());
+    let req_type = request.resourceType();
+
+    let filter_flg = false;
+
+    if (config.filter == "white") {
+      if(config.typelist.indexOf(req_type) >= 0) {
+        filter_flg = true;
+      }
+    } else if(config.filter == "black") {
+      if(config.typelist.indexOf(req_type) < 0) {
+        filter_flg = true;
+      }
+    }
+
+    return filter_flg;
+}
+
+function filterResponse(response, config) {
+  const request = response.request();
+  let req_type = request.resourceType();
+
+  let filter_flg = false;
+
+  if (config.filter == "white") {
+    if(config.typelist.indexOf(req_type) >= 0) {
+      filter_flg = true;
+    }
+  } else if(config.filter == "black") {
+    if(config.typelist.indexOf(req_type) < 0) {
+      filter_flg = true;
+    }
+  }
+
+  return filter_flg;
+}
+
+export async function gotoUrl(url) {
   if (browser == null || page == null) {
     return false;
   }
-
-//  const start_time = new Date();
-  
 //  await page.waitForNavigation()
 
 //  await page.goto(url, {'timeout': 10000, 'waitUntil':'load'});
@@ -121,25 +207,18 @@ async function gotoUrl(url){
 //await page.goto(url, { waitUntil: 'networkidle2' });
 
   try {
+//    await page.waitForNavigation();
 //    await page.goto(url, {timeout: 60000});
     await page.goto(url);
-    if (this.waitForElement !== null) {
-      return true;
-    }
-    return false;
+    return true;
   } catch (err) {
     console.error(err.message);
     return false;
   }
-
-//  const end_time = new Date();
-
-//  console.log("goto Time :", (end_time.valueOf() - start_time.valueOf())/1000);
-
   return true;
 }
 
-async function getTitle(){
+export async function getTitle() {
   if (browser == null || page == null) {
     return null;
   }
@@ -149,27 +228,31 @@ async function getTitle(){
   return title;
 }
 
-async function innerText(selector){
+export async function innerText(selector) {
   if (browser == null || page == null) {
     return null;
   }
+
+  await page.waitForSelector(selector);
 
   const text = await page.$eval(selector, el => el.innerText);
 
   return text;
 }
 
-async function innerHTML(selector){
+export async function innerHTML(selector) {
   if (browser == null || page == null) {
     return null;
   }
+
+  await page.waitForSelector(selector);
 
   const html = await page.$eval(selector, el => el.innerHTML);
 
   return html;
 }
 
-async function screenShot(path){
+export async function screenShot(path) {
   if (browser == null || page == null) {
     return null;
   }
@@ -177,7 +260,7 @@ async function screenShot(path){
   await page.screenshot({ path: path });
 }
 
-async function openAlert(text){
+export async function openAlert(text) {
   if (browser == null || page == null) {
     return;
   }
@@ -185,7 +268,7 @@ async function openAlert(text){
   await page.evaluate((msg) => {alert(msg);}, text);
 }
 
-async function setFocus(selector){
+export async function setFocus(selector) {
   if (browser == null || page == null) {
     return null;
   }
@@ -193,7 +276,7 @@ async function setFocus(selector){
   await page.focus(selector);
 }
 
-async function hover(selector){
+export async function hover(selector) {
   if (browser == null || page == null) {
     return null;
   }
@@ -201,7 +284,7 @@ async function hover(selector){
   await page.hover(selector);
 }
 
-async function keyType(text){
+export async function keyType(text) {
   if (browser == null || page == null) {
     return null;
   }
@@ -209,7 +292,7 @@ async function keyType(text){
   await page.keyboard.type(text);
 }
 
-async function mouseLClick(x, y){
+export async function mouseLClick(x, y) {
   if (browser == null || page == null) {
     return null;
   }
@@ -217,27 +300,10 @@ async function mouseLClick(x, y){
   await page.mouse.click(x, y, { button: 'left' })
 }
 
-async function mouseMove(x, y){
+export async function mouseMove(x, y) {
   if (browser == null || page == null) {
     return null;
   }
 
   await page.mouse.move(x, y)
 }
-
-module.exports = {
-  startBrowser, 
-  stopBrowser,
-  setPagOptions,
-  setPageEvents,
-  gotoUrl,
-  getTitle,
-  innerText,
-  innerHTML,
-  screenShot,
-  openAlert,
-  setFocus,
-  keyType,
-  mouseLClick,
-  mouseMove
-};

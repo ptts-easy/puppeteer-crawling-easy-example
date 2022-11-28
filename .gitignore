@@ -13,6 +13,11 @@
 # production
 /build
 
+#dataset
+/dataset/crawled-data
+/dataset/crawled-urls
+/dataset/new-urls
+
 # misc
 .DS_Store
 .env.local

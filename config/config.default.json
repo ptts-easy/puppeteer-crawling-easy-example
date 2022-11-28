@@ -1,0 +1,44 @@
+{
+  "browser":{
+    "headless": false,
+    "ignoreHTTPSErrors": true,
+    "acceptInsecureCerts": true,
+    "args": [
+        "--start-maximized"
+      ]
+  },
+  "page":{
+    "defaultNavigationTimeout" : 30000,
+    "viewport":{ 
+      "width": 1366, 
+      "height": 768
+    }
+  },
+  "header":{
+    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"
+  },
+  "cookie" : {
+    "name": "login_email",
+    "value": "set_by_cookie@domain.com",
+    "domain": ".paypal.com",
+    "url": "https://www.paypal.com/",
+    "path": "/",
+    "httpOnly": true,
+    "secure": true
+  },
+  "crawl":{
+    "type":"title",
+    "deep":1,
+    "filter":"white",
+    "typelist":["document"]
+  },
+  "input":{
+    "urls":"./dataset/urls/"
+  },
+  "output":{
+    "clear":true,
+    "crawled_urls":"./dataset/crawled-urls/",
+    "crawled_data":"./dataset/crawled-data/",
+    "new_urls":"./dataset/new-urls/"
+  }
+}
