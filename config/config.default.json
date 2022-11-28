@@ -3,6 +3,8 @@
     "headless": false,
     "ignoreHTTPSErrors": true,
     "acceptInsecureCerts": true,
+    "ignoreDefaultArgs": ["--disable-extensions", "--enable-automation"],
+    "executablePath": "C:/Users/Administrator/.cache/puppeteer/chrome/win64-1056772/chrome-win/chrome.exe",
     "args": [
         "--start-maximized"
       ]
@@ -27,7 +29,7 @@
     "secure": true
   },
   "crawl":{
-    "type":"title",
+    "type":"html",
     "deep":1,
     "filter":"white",
     "typelist":["document"]
